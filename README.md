@@ -3,12 +3,14 @@
 A Luanti mod that adds three styles of zombie to your world, built on the
 **mobs_redo** API. Zombies stalk the surface at night, lurk in mapgen
 dungeons and dungeonsplus rooms around the clock, and haunt rail corridors
-in the dark. They can be tamed into loyal companions. All spawning uses
-hidden, camouflaged spawner nodes — no constant ABM scanning underground.
+in the dark. They can be tamed into loyal companions.
 
 Originally by **Nathan Salapat** (2020).  
 Modified and extended by **TechnoWolfTV** (2026) for the
 [Adventurelands](https://github.com/TechnoWolfTV/Adventurelands) game.
+
+This README describes current behaviour. For the full history of changes,
+see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -317,33 +319,15 @@ If you hold fewer than 3 teeth and right-click, the zombie tells you it
 wants 3. Already-owned zombies tell you they have an owner and cannot be
 claimed — tamed zombies are theft-proof.
 
-### What changes at taming
+### What a tamed zombie does
 
-- **Ownership:** `self.owner` is set to your player name. This persists
-  across world reloads and server restarts — the owner field is serialised
-  into the mob's staticdata and restored on activation.
-- **Becomes an NPC:** the zombie's mobs_redo type changes from `monster` to
-  `npc`. This is essential: mobs_redo hard-codes monsters as untameable —
-  monsters attack their owners (the tamed "must be provoked" exemption
-  excludes the monster type), cannot owner-follow (an NPC-only mechanic),
-  and are marked non-persistent while wild. The type change fixes all of
-  this at the source and persists across restarts.
-- **Engine persistence restored:** while wild, mobs_redo flags monster
-  entities `static_save = false` so the engine discards them on unload.
-  Taming explicitly restores `static_save = true`, so your pet is saved
-  with the world and reappears exactly where you left it after any reload
-  or server restart.
-- **No despawn:** `self.tamed = true` prevents mobs_redo's lifetimer and
-  far-mob cleanup from ever removing the zombie.
-- **Sunlight immunity:** `light_damage` is set to 0. The zombie survives
-  outdoors in daylight indefinitely.
-- **Standing order:** the zombie enters `order = stand`, halting in place.
-- **Aggro cleared:** any active attack state and pathfinding target are
-  reset immediately so the zombie does not finish a swing at you after taming.
-
-Zombies tamed under older versions of this mod are automatically repaired
-the moment they activate: the type conversion, persistence flag, and owner
-protections are applied retroactively — no re-taming required.
+- **Belongs to you** permanently — ownership persists across world reloads
+  and server restarts.
+- **Never attacks you.**
+- **Survives daylight** — tamed zombies take no sunlight damage.
+- **Never despawns** — your pet stays in the world indefinitely.
+- **Stands guard** where you tamed it until told to follow (see below).
+- **Stops attacking you instantly** if it was mid-fight when tamed.
 
 ### Following
 
@@ -356,38 +340,19 @@ persists across world reloads.
 
 ### Loyalty and defence
 
-Tamed zombies obey two loyalty rules:
-
-1. **Attack what the owner attacks:** `owner_loyal = true` is set on the
-   mob definition. In mobs_redo this means when you punch any entity near
-   your tamed zombie, it joins the fight against that entity. This is
-   mobs_redo's native mechanic, so it works reliably against all entity
-   types.
-
-2. **Defend the owner:** an `on_punchplayer` hook fires whenever any player
-   is punched. If the punched player has tamed zombies within 16 nodes,
-   those zombies immediately attack the entity that threw the punch. This
-   covers defence against both other players and hostile mobs.
-
-3. **Never attack the owner:** three layers guarantee this. First,
-   mobs_redo's attack acquisition loop already skips any player who is the
-   mob's registered owner. Second, taming installs a per-entity `do_attack`
-   override — `do_attack` is the single function every attack acquisition
-   in mobs_redo funnels through, so refusing the owner there is an absolute
-   guarantee no code path can bypass. Third, a per-step failsafe in
-   `do_custom` clears the attack target if the owner ever appears as one.
-   The override is reinstalled automatically when a previously tamed zombie
-   loads from a save. Your tamed zombie will never hurt you.
+- **Attacks what you attack:** punch any entity near your tamed zombie and
+  it joins the fight against that target.
+- **Defends you:** if anything — player or hostile mob — attacks you, your
+  tamed zombies within 16 nodes turn on the attacker.
+- **Never attacks you** under any circumstances.
 
 ### Survival across restarts
 
-mobs_redo serialises the full entity state to `staticdata` on unload. The
-zombie's `owner`, `tamed`, `order`, `follow`, and `light_damage` fields are
-all plain Lua values and are automatically included in this serialisation —
-no special handling is required. On reload your zombie reappears at the
-same position, still owned, still tamed, standing idle (mobs_redo resets
-`state` to `stand` and clears `attack`/`following` on unload, which is
-correct — the zombie stands guard until you pull out a tooth again).
+Tamed zombies are saved with the world. After any reload or server restart
+your pet reappears where you left it, still owned, standing guard in Stay
+mode — right-click to resume Follow mode. Zombies tamed under older
+versions of the mod are upgraded automatically the first time they load;
+no re-taming is ever needed.
 
 ---
 
