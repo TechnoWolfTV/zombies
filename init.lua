@@ -19,24 +19,69 @@ for i = 1, 16 do
    table.insert(zombies.skins, {skin_base[math.random(3)]..'^'..face_base[math.random(5)]..'^'..shirt_base[math.random(4)]..'^'..pants_base[math.random(6)]..'^'..hair_base[math.random(5)]})
 end
 
+-- LOOT SYSTEM
+-- ============================================================================
+-- Two kinds of drops:
+--
+--   inventory (below)          -- ordinary drops. Handled by mobs_redo's own
+--                                 drop system. These can drop on ANY death.
+--                                 Every entry has min >= 1 so a successful
+--                                 roll always yields at least one item.
+--
+--   player_only_drops (below)  -- valuable/special drops. Handled by our own
+--                                 code in zombie_on_die so we can guarantee
+--                                 BOTH: (a) they ONLY drop when a player lands
+--                                 the kill (never from lava, sunlight, fall,
+--                                 or other zombies), and (b) a successful roll
+--                                 always yields at least one (never zero).
+--
+-- WHY THE SPLIT: mobs_redo's built-in drop table has a quirk — the ONLY way to
+-- mark an item "player-kill-only" is to set its min to 0, but min=0 also means
+-- a successful roll can produce a count of 0 (a drop that gives nothing). The
+-- original Zombies mod used min=0 on its valuable items (tooth, bone, etc.)
+-- specifically to get the player-kill gate, and inherited the empty-roll side
+-- effect unintentionally. We separate the two concerns: gated items live in
+-- player_only_drops and get both guarantees; the empty-roll behavior is gone.
+-- Drop CHANCES are unchanged from before, so rarity/balance is preserved.
+
+-- Common "scrap" drops — the rotten-flesh tier. These can drop on ANY death
+-- (player kill, sunlight, lava, fall) so a zombie always leaves a little
+-- something behind, but nothing here is valuable enough to farm passively.
+-- Every entry has min >= 1, so a successful roll never yields zero.
 local inventory = {
-   {name = 'default:dirt', chance = 2, min = 3, max = 5},
-   {name = 'default:apple', chance = 6, min = 2, max = 5},
-   {name = 'default:clay_lump', chance = 10, min = 1, max = 4},
-   {name = 'bonemeal:bone', chance = 3, min = 0, max = 10},
-   {name = 'zombies:tooth', chance = 10, min = 0, max = 3},
-   {name = 'farming:bread', chance = 7, min = 0, max = 2},
-   {name = 'default:mese_crystal_fragment', chance = 100, min = 1, max = 2},
-   {name = 'mobs:leather', chance = 4, min = 1, max = 3},
-   {name = 'tnt:gunpowder', chance = 100, min = 0, max = 1},
-   {name = 'default:coal_lump', chance = 5, min = 0, max = 1},
-   {name = 'default:sword_mese', chance = 1000, min = 0, max = 1},
-   {name = 'default:diamond', chance = 300, min = 1, max = 1},
-   {name = 'default:sword_diamond', chance = 1500, min = 1, max = 1},
-   {name = 'default:diamondblock', chance = 5000, min = 1, max = 1}
+   {name = 'default:torch',          chance = 5,    min = 1, max = 3},
+   {name = 'default:apple',          chance = 6,    min = 2, max = 5},
+   {name = 'mobs:leather',           chance = 10,   min = 1, max = 3},
+   {name = 'default:iron_lump',      chance = 15,   min = 1, max = 3},
+   {name = 'default:steel_ingot',    chance = 25,   min = 1, max = 2},
 }
 
--- Currency drops are optional: only added if the currency mod is installed
+-- Player-kill-only drops — the valuable tier. Like Minecraft's rare drops,
+-- these appear ONLY when a player lands the killing blow, never from
+-- environmental deaths, so zombies can't be passively farmed for anything
+-- worthwhile. Enforced in code (zombie_on_die). All have min >= 1, so a
+-- successful roll always yields at least one item (no phantom zero drops).
+-- Drop CHANCES are unchanged from the previous version — rarity is preserved;
+-- the only change is WHICH deaths qualify and the removal of empty rolls.
+local player_only_drops = {
+   {name = 'bonemeal:bone',          chance = 3,    min = 1, max = 10},
+   {name = 'farming:bread',          chance = 7,    min = 1, max = 2},
+   {name = 'default:gold_lump',      chance = 75,   min = 1, max = 2},
+   {name = 'zombies:tooth',          chance = 50,   min = 1, max = 3},
+   {name = 'default:mese_crystal_fragment', chance = 100,  min = 1, max = 2},
+   {name = 'tnt:gunpowder',          chance = 100,  min = 1, max = 1},
+   {name = 'default:gold_ingot',     chance = 150,  min = 1, max = 1},
+   {name = 'keys:key',               chance = 200,  min = 1, max = 1},
+   {name = 'default:mese_crystal',   chance = 250,  min = 1, max = 1},
+   {name = 'default:book',           chance = 250,  min = 1, max = 1},
+   {name = 'default:diamond',        chance = 300,  min = 1, max = 1},
+   {name = 'default:sword_mese',     chance = 1000, min = 1, max = 1},
+   {name = 'default:sword_diamond',  chance = 1500, min = 1, max = 1},
+}
+
+-- Currency drops are optional: only added if the currency mod is installed.
+-- Routed through player_only_drops so money is never farmable by waiting for
+-- zombies to die to sunlight/lava — you must earn the kill.
 if minetest.get_modpath('currency') then
    local currency_drops = {
       {name = 'currency:minegeld_cent_5',  chance = 3,    min = 1, max = 5},
@@ -45,11 +90,23 @@ if minetest.get_modpath('currency') then
       {name = 'currency:minegeld',         chance = 20,   min = 1, max = 3},
       {name = 'currency:minegeld_5',       chance = 75,   min = 1, max = 2},
       {name = 'currency:minegeld_10',      chance = 200,  min = 1, max = 1},
-      {name = 'currency:minegeld_50',      chance = 500,  min = 1, max = 1},
-      {name = 'currency:minegeld_100',     chance = 2000, min = 1, max = 1},
+      {name = 'currency:minegeld_50',      chance = 300,  min = 1, max = 1},
+      {name = 'currency:minegeld_100',     chance = 500,  min = 1, max = 1},
    }
    for _, drop in ipairs(currency_drops) do
-      table.insert(inventory, drop)
+      table.insert(player_only_drops, drop)
+   end
+end
+
+-- Bag drops: only added if unified_inventory is installed. Also player-kill-only.
+if minetest.get_modpath('unified_inventory') then
+   local bag_drops = {
+      {name = 'unified_inventory:bag_small',  chance = 100,  min = 1, max = 1},
+      {name = 'unified_inventory:bag_medium', chance = 500,  min = 1, max = 1},
+      {name = 'unified_inventory:bag_large',  chance = 1000, min = 1, max = 1},
+   }
+   for _, drop in ipairs(bag_drops) do
+      table.insert(player_only_drops, drop)
    end
 end
 
@@ -57,8 +114,10 @@ local noise = {
    distance = 10,
    random = 'groan',
    war_cry = 'groan',
-   damage = 'groan',
-   death = 'eating-brains',
+   damage = 'zombies_hit',
+   -- NOTE: no `death` key here on purpose. Option B: the death sound is
+   -- fired manually from on_die at DEATH_SOUND_CHANCE so it plays only
+   -- occasionally rather than on every death. See DEATH_SOUND_* below.
 }
 
 -- Ambient moan fires every MOAN_MIN to MOAN_MAX seconds per zombie (random)
@@ -66,15 +125,37 @@ local MOAN_MIN = 4
 local MOAN_MAX = 12
 -- War cry / damage sounds are throttled to at most once per COMBAT_COOLDOWN seconds
 local COMBAT_COOLDOWN = 2.5
+-- The groan is played by two independent systems: our own ambient moan timer
+-- (below) AND mobs_redo's built-in war_cry/random triggers (which route through
+-- mob_sound). Without coordination those can fire the same groan file at the
+-- same instant and audibly double up. GROAN_COOLDOWN is a shared minimum gap
+-- between ANY two groans from one zombie, tracked in _last_groan, so the two
+-- systems can't stack on each other. Set a touch under MOAN_MIN so it never
+-- suppresses a normally-scheduled ambient moan, only true near-simultaneous overlaps.
+local GROAN_COOLDOWN = 3.0
+-- Option B death sound: instead of playing on every death, the death cry
+-- plays only occasionally. Rolled once per death in on_die.
+local DEATH_SOUND = 'zombies_death'
+local DEATH_SOUND_CHANCE = 4        -- 1-in-4 (25%) chance to play on death
+-- Idle "eating" flavor: each time the ambient moan timer fires, there is a
+-- small chance the zombie plays the eating-brains sound INSTEAD of the groan.
+local EAT_SOUND = 'eating-brains'
+local EAT_SOUND_CHANCE = 25         -- 1-in-25 per moan opportunity
 
 -- Installs a per-entity do_attack override that refuses the owner as a
 -- target. do_attack is the single function all attack acquisition in
 -- mobs_redo funnels through, so this is a hard guarantee the zombie can
 -- never attack its owner, regardless of state, save data, or timing.
+-- Like the mob_sound wrapper, we detect installation by function identity
+-- rather than a persisted boolean: the override is a function (not saved to
+-- staticdata), so after a world reload the engine restores the unwrapped
+-- do_attack and we must reinstall. A stored reference lets us tell whether
+-- the live do_attack is still ours; if not, we (re)wrap.
 local function zombie_guard_owner(self)
-   if self._owner_guarded then return end
+   if self.do_attack == self._zombie_attack_guard then return end
    local original_do_attack = self.do_attack
-   self.do_attack = function(s, target, force)
+   local guard
+   guard = function(s, target, force)
       if target and target.get_player_name then
          local ok, tname = pcall(function() return target:get_player_name() end)
          if ok and tname == s.owner and s.owner ~= '' then
@@ -83,36 +164,75 @@ local function zombie_guard_owner(self)
       end
       return original_do_attack(s, target, force)
    end
-   self._owner_guarded = true
+   self.do_attack = guard
+   self._zombie_attack_guard = guard
 end
 
+-- Sentinel marker for our wrapped mob_sound. We cannot rely on a persisted
+-- boolean flag to know whether the wrapper is installed: mobs_redo serializes
+-- most entity fields to staticdata, so a flag like _sound_patched=true SURVIVES
+-- a world reload -- but the wrapper function itself does NOT (functions aren't
+-- serialized). That mismatch would leave a reloaded zombie with the flag set
+-- but the wrapper gone, so it would never re-wrap and would silently lose the
+-- hit throttle and groan coordination after every restart. Instead we detect
+-- the wrapper by identity: we keep a per-entity reference to the exact wrapper
+-- we installed (itself a function, so it is NOT serialized and vanishes on
+-- reload alongside the wrapper). Whenever the live mob_sound isn't that stored
+-- reference -- which is exactly the fresh-spawn and post-reload case -- we
+-- (re)wrap. This can never double-wrap: original_mob_sound always captures the
+-- current unwrapped method at wrap time.
 local function make_sound_throttle()
    return function(self, dtime)
-      if not self._sound_patched then
-         -- per-entity timers
-         self._combat_timer = 0
-         self._moan_timer = math.random(MOAN_MIN, MOAN_MAX)
+      -- (Re)install the mob_sound wrapper if it isn't currently ours. On first
+      -- run self._zombie_sound_wrapper is nil; after a reload the engine has
+      -- restored the unwrapped class method, so our stored wrapper ~= the live
+      -- one and we re-wrap. Timers are (re)seeded only when actually wrapping.
+      if self.mob_sound ~= self._zombie_sound_wrapper then
+         -- seed timers if this is a fresh entity (they may already carry
+         -- sensible values restored from staticdata after a reload; only
+         -- initialize the ones that are missing so we don't reset mid-cycle).
+         self._combat_timer = self._combat_timer or 0
+         self._moan_timer = self._moan_timer or math.random(MOAN_MIN, MOAN_MAX)
+         self._last_groan = self._last_groan or 0
 
          local original_mob_sound = self.mob_sound
-         self.mob_sound = function(s, sound)
+         local wrapper
+         wrapper = function(s, sound)
             if not sound then return end
             local name = type(sound) == 'string' and sound or sound.name
-            -- death always plays unthrottled
-            if name == noise.death then
-               return original_mob_sound(s, sound)
+            -- Groan coordination: war_cry and mobs_redo's built-in random
+            -- sound both use the groan file and arrive through here. If our
+            -- ambient moan timer (or a previous groan) played too recently,
+            -- swallow this one so groans never stack. Tracked shared with the
+            -- ambient timer via _last_groan.
+            if name == 'groan' then
+               if s._last_groan and s._last_groan < GROAN_COOLDOWN then
+                  return
+               end
+               original_mob_sound(s, sound)
+               s._last_groan = 0
+               return
             end
-            -- combat sounds (war_cry, damage) throttled by COMBAT_COOLDOWN
+            -- Non-groan combat sounds (damage/hit) throttled by COMBAT_COOLDOWN
+            -- so striking a zombie repeatedly doesn't machine-gun the hit sound.
+            -- The death sound is NOT handled here; Option B plays it directly
+            -- from on_die at DEATH_SOUND_CHANCE.
             if s._combat_timer and s._combat_timer <= 0 then
                original_mob_sound(s, sound)
                s._combat_timer = COMBAT_COOLDOWN
             end
          end
-         self._sound_patched = true
+         self.mob_sound = wrapper
+         self._zombie_sound_wrapper = wrapper
       end
 
       -- tick combat cooldown
       if self._combat_timer and self._combat_timer > 0 then
          self._combat_timer = self._combat_timer - dtime
+      end
+      -- tick groan cooldown (shared by ambient moan + mob_sound groans)
+      if self._last_groan then
+         self._last_groan = self._last_groan + dtime
       end
 
       -- Tamed-zombie loyalty upkeep (runs every step for owned zombies):
@@ -120,10 +240,11 @@ local function make_sound_throttle()
       -- and NEVER hold the owner as an attack target under any circumstance.
       if self.owner and self.owner ~= '' then
          -- Ensure the do_attack owner-guard is installed (covers zombies
-         -- tamed under older versions or loaded fresh from staticdata).
-         if not self._owner_guarded then
-            zombie_guard_owner(self)
-         end
+         -- tamed under older versions, loaded fresh from staticdata, or
+         -- reloaded after a restart). zombie_guard_owner is idempotent: it
+         -- checks whether the live do_attack is still ours and only re-wraps
+         -- if not, so calling it every step for owned zombies is safe.
+         zombie_guard_owner(self)
          -- Repair pets tamed under older versions: convert to npc and
          -- restore engine persistence so they stop attacking the owner,
          -- can follow, and survive restarts.
@@ -165,15 +286,192 @@ local function make_sound_throttle()
       if self._moan_timer then
          self._moan_timer = self._moan_timer - dtime
          if self._moan_timer <= 0 then
-            minetest.sound_play('groan', {
-               object = self.object,
-               max_hear_distance = noise.distance,
-               pitch = 1.0 + math.random(-10, 10) * 0.005,
-            }, true)
+            -- Usually a groan; occasionally (1-in-EAT_SOUND_CHANCE) the
+            -- zombie is heard gnawing instead. The eating sound replaces
+            -- the groan for that opportunity rather than stacking on top.
+            local ambient = 'groan'
+            if math.random(EAT_SOUND_CHANCE) == 1 then
+               ambient = EAT_SOUND
+            end
+            -- For a groan, honor the shared cooldown so we don't stack on a
+            -- war_cry/random groan that just played via mob_sound. If a groan
+            -- played too recently, skip this ambient one (it'll come back on
+            -- the next interval). Eating-brains is exempt: different file, rare.
+            local play = true
+            if ambient == 'groan' then
+               if self._last_groan and self._last_groan < GROAN_COOLDOWN then
+                  play = false
+               end
+            end
+            if play then
+               minetest.sound_play(ambient, {
+                  object = self.object,
+                  max_hear_distance = noise.distance,
+                  pitch = 1.0 + math.random(-10, 10) * 0.005,
+               }, true)
+               if ambient == 'groan' then
+                  self._last_groan = 0
+               end
+            end
             self._moan_timer = math.random(MOAN_MIN, MOAN_MAX)
          end
       end
    end
+end
+
+-- Spawn a dropped item stack at pos, matching how mobs_redo tosses drops
+-- (small random horizontal nudge + upward pop) so our custom drops look
+-- identical to the engine's.
+local function zombie_spawn_drop(pos, name, count)
+   if count < 1 then return end
+   -- Skip unknown items so a missing optional mod can't error (mirrors the
+   -- way mobs_redo silently tolerates unknown drops).
+   if not minetest.registered_items[name] then return end
+   local obj = minetest.add_item(pos, ItemStack(name .. ' ' .. count))
+   if obj then
+      obj:set_velocity({
+         x = math.random() - 0.5,
+         y = 5,
+         z = math.random() - 0.5,
+      })
+   end
+end
+
+-- LOOTING SUPPORT (x_enchanting-compatible, no hard dependency)
+-- ----------------------------------------------------------------------------
+-- x_enchanting stores the looting enchant level as a float `is_looting` on the
+-- weapon's ITEM META, and only hooks entities named mobs_animal:/mobs_monster:/
+-- animalia: -- so our zombies:* mobs are ignored by it. We implement looting
+-- ourselves, reading the SAME meta key so behaviour matches the rest of the
+-- world. Because it's just a number on the item, no x_enchanting API call is
+-- needed: with no enchanting mod installed the meta is simply 0 and looting is
+-- a no-op. x_enchanting is therefore an OPTIONAL dependency (load-order only) --
+-- nothing here breaks without it.
+--
+-- Model (rarity-preserving, tiered): looting grants an EXTRA roll at each
+-- item's OWN drop chance -- an additional "lottery ticket" at the same rarity,
+-- not a free win. With probability looting/(looting+1) (L1=50%, L2~67%, L3=75%)
+-- the item gets one extra roll at its normal 1-in-chance gate. A rare item's
+-- bonus therefore stays rare (a 1/1000 sword only rises to ~1/570 at L3), while
+-- common items improve more in absolute terms. Effect is additive on top of the
+-- base drop and only ever runs on player kills. No-op without looting.
+-- max_drop_level (from the weapon, usually 1) scales the COUNT of a bonus that
+-- lands, matching x_enchanting's use of the same factor.
+
+-- Read the looting level and max_drop_level from a puncher's wielded item.
+-- Returns looting (number, 0 if none) and max_drop_level (number, >=1).
+local function zombie_get_looting(puncher)
+   if not puncher or type(puncher) ~= 'userdata' or not puncher.get_wielded_item then
+      return 0, 1
+   end
+   local ok, stack = pcall(function() return puncher:get_wielded_item() end)
+   if not ok or not stack then return 0, 1 end
+   local looting = 0
+   local meta = stack:get_meta()
+   if meta then
+      -- get_float returns 0 for an unset key, so this is safe with or without
+      -- x_enchanting installed.
+      looting = meta:get_float('is_looting') or 0
+   end
+   if looting < 0 then looting = 0 end
+   -- max_drop_level scales the bonus count, exactly as x_enchanting does.
+   -- Default to 1 (no scaling) if the tool doesn't define it.
+   local mdl = 1
+   local caps = stack:get_tool_capabilities()
+   if caps and caps.max_drop_level and caps.max_drop_level > 1 then
+      mdl = caps.max_drop_level
+   end
+   return looting, mdl
+end
+
+-- Apply the looting bonus pass to a drop table. Additive: EXTRA loot on top of
+-- the base drops. For each entry, with probability looting/(looting+1) the item
+-- gets one bonus roll AT ITS OWN CHANCE (rarity preserved); if that roll lands,
+-- a stack of random(min,max) * random(1,max_drop_level) is dropped. No-op when
+-- looting <= 0.
+local function zombie_looting_bonus(drop_table, pos, looting, max_drop_level)
+   if looting <= 0 then return end
+   local p_ticket = looting / (looting + 1)   -- L1=.5, L2≈.667, L3=.75
+   for _, d in ipairs(drop_table) do
+      -- Do we get an extra ticket for this item?
+      if math.random(10, 100) / 100 < p_ticket then
+         -- The extra ticket still has to pass the item's OWN rarity gate.
+         if math.random(d.chance) == 1 then
+            local lo = d.min or 1
+            local hi = d.max or lo
+            if lo < 1 then lo = 1 end
+            if hi < lo then hi = lo end
+            local base = math.random(lo, hi)
+            local mult = max_drop_level > 1 and math.random(1, max_drop_level) or 1
+            zombie_spawn_drop(pos, d.name, base * mult)
+         end
+      end
+   end
+end
+
+-- Handle the player-kill-only drops ourselves. This runs from on_die, where
+-- self.cause_of_death is already populated by mobs_redo. We drop these items
+-- ONLY when a player landed the killing blow, and always give at least the
+-- listed minimum (never a phantom zero). If the killing weapon has looting,
+-- both the valuables here AND the common scraps get a bonus pass.
+local function zombie_player_drops(self, pos)
+   local cod = self.cause_of_death
+   -- Match mobs_redo's own player check: puncher must be present, userdata,
+   -- and pass is_player. The userdata guard prevents is_player from erroring
+   -- on an unexpected value.
+   local p = cod and cod.puncher
+   local killer_is_player =
+      p and type(p) == 'userdata' and minetest.is_player(p)
+   if not killer_is_player then return end   -- no player kill => no special loot
+
+   -- Base valuable drops (guaranteed >= 1 when they roll).
+   for _, d in ipairs(player_only_drops) do
+      if math.random(d.chance) == 1 then
+         local lo = d.min or 1
+         local hi = d.max or lo
+         if lo < 1 then lo = 1 end           -- hard guarantee: never zero
+         if hi < lo then hi = lo end
+         zombie_spawn_drop(pos, d.name, math.random(lo, hi))
+      end
+   end
+
+   -- Looting bonus pass (additive), applied to BOTH tiers. The common scraps'
+   -- BASE drops were already handled by mobs_redo; here we add only their
+   -- looting bonus, alongside the valuables' bonus. No-op without looting.
+   local looting, mdl = zombie_get_looting(p)
+   if looting > 0 then
+      zombie_looting_bonus(player_only_drops, pos, looting, mdl)
+      zombie_looting_bonus(inventory, pos, looting, mdl)
+   end
+end
+
+-- Option B death sound. mobs_redo calls on_die(self, pos) when the mob dies.
+-- We roll a 1-in-DEATH_SOUND_CHANCE gate so the death cry is usually silent
+-- and only occasionally heard. Played at pos (not attached to the object,
+-- which is about to be removed) so it isn't cut short by the entity's removal.
+-- This hook also handles the player-kill-only loot (see zombie_player_drops).
+-- Returns nothing (nil) so mobs_redo proceeds with its normal removal.
+local function zombie_on_die(self, pos)
+   -- Resolve a usable position first; both the drops and the sound need it.
+   local at = pos
+   if not at and self and self.object then
+      local ok, p = pcall(function() return self.object:get_pos() end)
+      if ok then at = p end
+   end
+
+   -- Player-kill-only loot (guaranteed >= 1, never from environmental deaths).
+   if at then
+      zombie_player_drops(self, at)
+   end
+
+   -- Occasional death cry.
+   if math.random(DEATH_SOUND_CHANCE) ~= 1 then return end
+   if not at then return end
+   minetest.sound_play(DEATH_SOUND, {
+      pos = at,
+      max_hear_distance = noise.distance,
+      pitch = 1.0 + math.random(-10, 10) * 0.005,
+   }, true)
 end
 
 mobs:register_mob('zombies:1arm', {
@@ -196,6 +494,7 @@ mobs:register_mob('zombies:1arm', {
    makes_footstep_sound = true,
    sounds = noise,
    do_custom = make_sound_throttle(),
+   on_die = zombie_on_die,
    walk_velocity = 2,
    run_velocity = 4,
    jump = true,
@@ -237,6 +536,7 @@ mobs:register_mob('zombies:crawler', {
    makes_footstep_sound = true,
    sounds = noise,
    do_custom = make_sound_throttle(),
+   on_die = zombie_on_die,
    walk_velocity = .5,
    run_velocity = 1,
    jump = true,
@@ -278,6 +578,7 @@ mobs:register_mob('zombies:normal', {
    makes_footstep_sound = true,
    sounds = noise,
    do_custom = make_sound_throttle(),
+   on_die = zombie_on_die,
    walk_velocity = 2,
    run_velocity = 4,
    jump = true,

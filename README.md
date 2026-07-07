@@ -55,12 +55,21 @@ mobs_redo's built-in sound triggers:
   seconds and groans independently. This is per-entity and per-timer, so a
   group of zombies produces overlapping, irregular moaning rather than
   synchronised bursts. You will often hear zombies before you see them.
+  Occasionally (about 1 in 25 of these moan opportunities) a zombie makes a
+  wet gnawing "eating" sound instead of a groan — a subtle bit of flavor
+  rather than a moan.
+- **Getting hit** — striking a zombie plays a distinct impact grunt. This
+  is throttled to once per 2.5 seconds per zombie so hitting one rapidly
+  doesn't stack the sound on itself.
 - **Combat groans** — when a zombie's pathfinder resolves a route toward
-  you it emits a groan. These are throttled to once per 2.5 seconds per
-  zombie to prevent a single chasing zombie from layering the sound on
-  itself repeatedly.
-- **Death** — always plays `eating-brains.ogg` on death, unthrottled,
-  regardless of the combat cooldown.
+  you it emits a groan, sharing the same 2.5-second per-zombie throttle.
+- **Death** — usually silent. On death there is a 1-in-4 chance the zombie
+  lets out a death cry; most of the time it dies quietly.
+
+Sounds are sourced from `groan.ogg`, `eating-brains.ogg`, `zombies_hit.ogg`
+(CC0, Under7dude), and `zombies_death.ogg` (CC0, dreggsome). See
+`license.txt` for full credits. The chances and timings above are defined as
+named constants near the top of `init.lua` if you want to tune them.
 
 ---
 
@@ -260,30 +269,61 @@ If tsm_railcorridors is not installed this system is silently skipped.
 
 ## Drops
 
-All three zombie types share the same loot table. Each line rolls
-independently on every kill. `chance` is 1-in-N; a `min` of 0 means even
-a successful roll can yield nothing.
+All three zombie types share the same loot, split into two tiers modelled on
+how Minecraft handles mob drops:
 
-### Always available
+- **Common scraps** drop on **any** death — whether you kill the zombie, it
+  burns in sunlight, or it falls in lava. A zombie always leaves a little
+  something behind, but nothing in this tier is worth farming passively.
+- **Valuables** drop **only when a player lands the killing blow.** A zombie
+  that dies to sunlight, lava, fall damage, or another mob drops none of
+  these. This prevents passive loot farms — you have to earn the good stuff.
+
+Each line rolls independently, and `chance` is 1-in-N. Every successful roll
+now yields **at least the listed minimum** — there are no empty drops. (A
+prior version reused a min of 0 on the valuable items; that was the mechanism
+the underlying mob API uses to mark an item "player-kill-only," but it also
+let successful rolls produce nothing. The two behaviours are now separated:
+the player-kill gate is enforced directly, and every drop yields ≥ 1.)
+
+### Common scraps (drop on any death)
 
 | Item | Chance | Min | Max | Notes |
 |---|---|---|---|---|
-| `default:dirt` | 1 in 2 | 3 | 5 | Very common |
-| `bonemeal:bone` | 1 in 3 | 0 | 10 | Common (requires bonemeal mod) |
-| `mobs:leather` | 1 in 4 | 1 | 3 | Common |
-| `default:coal_lump` | 1 in 5 | 0 | 1 | Common |
-| `default:apple` | 1 in 6 | 2 | 5 | Common |
-| `farming:bread` | 1 in 7 | 0 | 2 | Uncommon (requires farming mod) |
-| `default:clay_lump` | 1 in 10 | 1 | 4 | Uncommon |
-| `zombies:tooth` | 1 in 10 | 0 | 3 | Uncommon — taming currency |
-| `default:mese_crystal_fragment` | 1 in 100 | 1 | 2 | Very rare |
-| `tnt:gunpowder` | 1 in 100 | 0 | 1 | Very rare (requires tnt mod) |
-| `default:diamond` | 1 in 300 | 1 | 1 | Extremely rare |
-| `default:sword_mese` | 1 in 1000 | 0 | 1 | Jackpot |
-| `default:sword_diamond` | 1 in 1500 | 1 | 1 | Jackpot |
-| `default:diamondblock` | 1 in 5000 | 1 | 1 | Legendary |
+| `default:torch` | 1 in 5 | 1 | 3 | Everyone carries torches |
+| `default:apple` | 1 in 6 | 2 | 5 | Food |
+| `mobs:leather` | 1 in 10 | 1 | 3 | Clothing/belt |
+| `default:iron_lump` | 1 in 15 | 1 | 3 | Miner carrying ore |
+| `default:steel_ingot` | 1 in 25 | 1 | 2 | Smith or trader |
 
-### Currency (requires currency mod)
+### Valuables (player kill only)
+
+Themed around what a person would have been carrying before they became a
+zombie. None of these drop unless a player lands the kill.
+
+| Item | Chance | Min | Max | Notes |
+|---|---|---|---|---|
+| `bonemeal:bone` | 1 in 3 | 1 | 10 | Their remains (requires bonemeal) |
+| `farming:bread` | 1 in 7 | 1 | 2 | Food (requires farming mod) |
+| `zombies:tooth` | 1 in 50 | 1 | 3 | Their tooth — taming currency |
+| `default:gold_lump` | 1 in 75 | 1 | 2 | Prospector or lucky miner |
+| `default:mese_crystal_fragment` | 1 in 100 | 1 | 2 | Carried shard |
+| `tnt:gunpowder` | 1 in 100 | 1 | 1 | Miner's supplies (requires tnt mod) |
+| `default:gold_ingot` | 1 in 150 | 1 | 1 | Merchant or wealthy traveller |
+| `keys:key` | 1 in 200 | 1 | 1 | Key-holder — what did they guard? |
+| `default:mese_crystal` | 1 in 250 | 1 | 1 | Adventurer's carried gem |
+| `default:book` | 1 in 250 | 1 | 1 | Scholar or scribe |
+| `default:diamond` | 1 in 300 | 1 | 1 | Adventurer's treasure |
+| `default:sword_mese` | 1 in 1000 | 1 | 1 | Jackpot |
+| `default:sword_diamond` | 1 in 1500 | 1 | 1 | Jackpot |
+
+Items whose mods aren't installed (bonemeal, farming, tnt) are simply skipped
+— no errors, no unknown-item drops.
+
+### Currency (requires currency mod, player kill only)
+
+Money is in the valuables tier — only a player kill produces it, so zombies
+can't be passively farmed for cash.
 
 | Item | Value | Chance | Min | Max |
 |---|---|---|---|---|
@@ -293,11 +333,53 @@ a successful roll can yield nothing.
 | `currency:minegeld` | M$1 | 1 in 20 | 1 | 3 |
 | `currency:minegeld_5` | M$5 | 1 in 75 | 1 | 2 |
 | `currency:minegeld_10` | M$10 | 1 in 200 | 1 | 1 |
-| `currency:minegeld_50` | M$50 | 1 in 500 | 1 | 1 |
-| `currency:minegeld_100` | M$100 | 1 in 2000 | 1 | 1 |
+| `currency:minegeld_50` | M$50 | 1 in 300 | 1 | 1 |
+| `currency:minegeld_100` | M$100 | 1 in 500 | 1 | 1 |
 
 Currency drops are only registered if the currency mod is present at load
 time. The mod works without it — no errors, no unknown item drops.
+
+### Bags (requires unified_inventory, player kill only)
+
+| Item | Chance | Min | Max |
+|---|---|---|---|
+| `unified_inventory:bag_small` | 1 in 100 | 1 | 1 |
+| `unified_inventory:bag_medium` | 1 in 500 | 1 | 1 |
+| `unified_inventory:bag_large` | 1 in 1000 | 1 | 1 |
+
+Bag drops are only registered if unified_inventory is present at load time.
+
+### Looting enchantment (optional, x_enchanting-compatible)
+
+If you kill a zombie with a weapon that carries a **Looting** enchantment,
+every drop — common scraps and valuables alike — gets a bonus chance at an
+extra roll. The boost is **tiered** and, importantly, **rarity-preserving**:
+looting grants an extra "lottery ticket" at each item's *own* drop chance
+rather than a flat guaranteed drop, so rare items stay rare and only their
+odds improve proportionally.
+
+The extra-ticket probability follows the standard looting curve
+(`level / (level + 1)`): Looting I ≈ 50%, II ≈ 67%, III ≈ 75%. Applied to the
+tooth (base 1-in-50) that works out roughly to:
+
+| Looting | Effective tooth rate |
+|---|---|
+| none | ~1 in 50 |
+| I | ~1 in 35 |
+| II | ~1 in 31 |
+| III | ~1 in 30 |
+
+A 1-in-1500 diamond sword, by contrast, only improves to about 1-in-860 at
+Looting III — a real boost, but still a jackpot. Looting only ever applies on
+player kills (like all the valuables), and the bonus is additive on top of the
+normal drops.
+
+This reads the enchantment level directly from the weapon's item metadata
+(`is_looting`), the same field [x_enchanting](https://content.luanti.org/packages/SaKeL/x_enchanting/)
+uses. **No enchanting mod is required** — with none installed the field is
+simply absent and looting has no effect, with zero errors. x_enchanting is
+listed only as an optional dependency for load order; the zombies mod never
+calls its API.
 
 ---
 
@@ -309,8 +391,9 @@ permanently hostile.
 ### How to tame
 
 1. Collect **zombie teeth** (`zombies:tooth`) — they drop from all three
-   zombie types at 1-in-10 chance, 0–3 per kill. Expect to kill a dozen
-   or two before accumulating the three teeth required.
+   zombie types at a 1-in-50 chance, 1–3 per kill, **only when you land the
+   kill yourself** (teeth are in the player-kill-only tier). Expect to kill a
+   couple dozen zombies before accumulating the three teeth required.
 2. Hold a stack of **at least 3 teeth** in your active hand slot.
 3. **Right-click a normal zombie.** It growls "Braaaaiiiiinnnnssss", becomes
    yours, and any attack in progress against you is immediately cancelled.
@@ -369,6 +452,8 @@ no re-taming is ever needed.
 | `bonemeal` | Optional | `bonemeal:bone` drop |
 | `tsm_railcorridors` | Optional | Rail corridor LBM spawner system |
 | `dungeonsplus` | Optional | Dungeon room spawner feature integration |
+| `keys` | Optional | `keys:key` drop (part of minetest_game) |
+| `unified_inventory` | Optional | Bag drops (small, medium, large) |
 
 All optional dependencies degrade gracefully. If a mod is absent, its
 associated features are silently skipped at load time — no errors are
