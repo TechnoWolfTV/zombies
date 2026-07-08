@@ -49,11 +49,11 @@ end
 -- something behind, but nothing here is valuable enough to farm passively.
 -- Every entry has min >= 1, so a successful roll never yields zero.
 local inventory = {
-   {name = 'default:torch',          chance = 5,    min = 1, max = 3},
-   {name = 'default:apple',          chance = 6,    min = 2, max = 5},
-   {name = 'mobs:leather',           chance = 10,   min = 1, max = 3},
-   {name = 'default:iron_lump',      chance = 15,   min = 1, max = 3},
-   {name = 'default:steel_ingot',    chance = 25,   min = 1, max = 2},
+   {name = 'bonemeal:bone',          chance = 10,   min = 1, max = 1},
+   {name = 'farming:bread',          chance = 10,   min = 1, max = 1},
+   {name = 'default:torch',          chance = 10,   min = 1, max = 1},
+   {name = 'default:apple',          chance = 10,   min = 1, max = 1},
+   {name = 'mobs:leather',           chance = 10,   min = 1, max = 1},
 }
 
 -- Player-kill-only drops — the valuable tier. Like Minecraft's rare drops,
@@ -64,11 +64,11 @@ local inventory = {
 -- Drop CHANCES are unchanged from the previous version — rarity is preserved;
 -- the only change is WHICH deaths qualify and the removal of empty rolls.
 local player_only_drops = {
-   {name = 'bonemeal:bone',          chance = 3,    min = 1, max = 10},
-   {name = 'farming:bread',          chance = 7,    min = 1, max = 2},
-   {name = 'default:gold_lump',      chance = 75,   min = 1, max = 2},
+   {name = 'default:iron_lump',      chance = 15,   min = 1, max = 1},
+   {name = 'default:steel_ingot',    chance = 20,   min = 1, max = 1},
+   {name = 'default:gold_lump',      chance = 75,   min = 1, max = 1},
    {name = 'zombies:tooth',          chance = 50,   min = 1, max = 3},
-   {name = 'default:mese_crystal_fragment', chance = 100,  min = 1, max = 2},
+   {name = 'default:mese_crystal_fragment', chance = 100,  min = 1, max = 1},
    {name = 'tnt:gunpowder',          chance = 100,  min = 1, max = 1},
    {name = 'default:gold_ingot',     chance = 150,  min = 1, max = 1},
    {name = 'keys:key',               chance = 200,  min = 1, max = 1},
@@ -86,11 +86,11 @@ if minetest.get_modpath('currency') then
    local currency_drops = {
       {name = 'currency:minegeld_cent_5',  chance = 3,    min = 1, max = 5},
       {name = 'currency:minegeld_cent_10', chance = 5,    min = 1, max = 3},
-      {name = 'currency:minegeld_cent_25', chance = 8,    min = 1, max = 2},
-      {name = 'currency:minegeld',         chance = 20,   min = 1, max = 3},
+      {name = 'currency:minegeld_cent_25', chance = 8,    min = 1, max = 3},
+      {name = 'currency:minegeld',         chance = 20,   min = 1, max = 2},
       {name = 'currency:minegeld_5',       chance = 75,   min = 1, max = 2},
-      {name = 'currency:minegeld_10',      chance = 200,  min = 1, max = 1},
-      {name = 'currency:minegeld_50',      chance = 300,  min = 1, max = 1},
+      {name = 'currency:minegeld_10',      chance = 100,  min = 1, max = 1},
+      {name = 'currency:minegeld_50',      chance = 250,  min = 1, max = 1},
       {name = 'currency:minegeld_100',     chance = 500,  min = 1, max = 1},
    }
    for _, drop in ipairs(currency_drops) do

@@ -290,11 +290,11 @@ the player-kill gate is enforced directly, and every drop yields ≥ 1.)
 
 | Item | Chance | Min | Max | Notes |
 |---|---|---|---|---|
-| `default:torch` | 1 in 5 | 1 | 3 | Everyone carries torches |
-| `default:apple` | 1 in 6 | 2 | 5 | Food |
-| `mobs:leather` | 1 in 10 | 1 | 3 | Clothing/belt |
-| `default:iron_lump` | 1 in 15 | 1 | 3 | Miner carrying ore |
-| `default:steel_ingot` | 1 in 25 | 1 | 2 | Smith or trader |
+| `bonemeal:bone` | 1 in 10 | 1 | 1 | Their remains (requires bonemeal) |
+| `farming:bread` | 1 in 10 | 1 | 1 | Food (requires farming mod) |
+| `default:torch` | 1 in 10 | 1 | 1 | Everyone carries torches |
+| `default:apple` | 1 in 10 | 1 | 1 | Food |
+| `mobs:leather` | 1 in 10 | 1 | 1 | Clothing/belt |
 
 ### Valuables (player kill only)
 
@@ -303,11 +303,11 @@ zombie. None of these drop unless a player lands the kill.
 
 | Item | Chance | Min | Max | Notes |
 |---|---|---|---|---|
-| `bonemeal:bone` | 1 in 3 | 1 | 10 | Their remains (requires bonemeal) |
-| `farming:bread` | 1 in 7 | 1 | 2 | Food (requires farming mod) |
+| `default:iron_lump` | 1 in 15 | 1 | 1 | Miner carrying ore |
+| `default:steel_ingot` | 1 in 20 | 1 | 1 | Smith or trader |
+| `default:gold_lump` | 1 in 75 | 1 | 1 | Prospector or lucky miner |
 | `zombies:tooth` | 1 in 50 | 1 | 3 | Their tooth — taming currency |
-| `default:gold_lump` | 1 in 75 | 1 | 2 | Prospector or lucky miner |
-| `default:mese_crystal_fragment` | 1 in 100 | 1 | 2 | Carried shard |
+| `default:mese_crystal_fragment` | 1 in 100 | 1 | 1 | Carried shard |
 | `tnt:gunpowder` | 1 in 100 | 1 | 1 | Miner's supplies (requires tnt mod) |
 | `default:gold_ingot` | 1 in 150 | 1 | 1 | Merchant or wealthy traveller |
 | `keys:key` | 1 in 200 | 1 | 1 | Key-holder — what did they guard? |
@@ -329,11 +329,11 @@ can't be passively farmed for cash.
 |---|---|---|---|---|
 | `currency:minegeld_cent_5` | 5¢ | 1 in 3 | 1 | 5 |
 | `currency:minegeld_cent_10` | 10¢ | 1 in 5 | 1 | 3 |
-| `currency:minegeld_cent_25` | 25¢ | 1 in 8 | 1 | 2 |
-| `currency:minegeld` | M$1 | 1 in 20 | 1 | 3 |
+| `currency:minegeld_cent_25` | 25¢ | 1 in 8 | 1 | 3 |
+| `currency:minegeld` | M$1 | 1 in 20 | 1 | 2 |
 | `currency:minegeld_5` | M$5 | 1 in 75 | 1 | 2 |
-| `currency:minegeld_10` | M$10 | 1 in 200 | 1 | 1 |
-| `currency:minegeld_50` | M$50 | 1 in 300 | 1 | 1 |
+| `currency:minegeld_10` | M$10 | 1 in 100 | 1 | 1 |
+| `currency:minegeld_50` | M$50 | 1 in 250 | 1 | 1 |
 | `currency:minegeld_100` | M$100 | 1 in 500 | 1 | 1 |
 
 Currency drops are only registered if the currency mod is present at load

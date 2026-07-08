@@ -7,6 +7,29 @@ behaviour only.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-07-08
+
+Loot rebalance to slow down how fast drops accumulate, especially when
+farming dungeon spawners. Drop CHANCES and tiers were retuned; the two-tier
+structure (common any-death vs. player-kill-only valuables) is unchanged.
+
+- **Common scraps flattened and reduced.** All five common drops are now a
+  uniform 1-in-10, min 1 / max 1 (previously torch 1-in-5 max 3, apple 1-in-6
+  max 5, leather 1-in-10 max 3, etc.). This is the main fix for loot piling up
+  too fast — the common tier no longer floods the ground.
+- **Tier reshuffle.** `bonemeal:bone` and `farming:bread` moved from valuables
+  into the common (any-death) tier at 1-in-10. `default:iron_lump` (1-in-15)
+  and `default:steel_ingot` (1-in-20) moved the other way, from common into
+  the player-kill-only valuables tier.
+- **Valuable quantities trimmed.** `mese_crystal_fragment` max 2 → 1; the
+  relocated iron/steel/gold_lump are all min 1 / max 1. `zombies:tooth`
+  unchanged (1-in-50, 1–3) so taming currency is unaffected.
+- **Currency retuned.** `minegeld_cent_25` max 2 → 3; `minegeld` max 3 → 2;
+  `minegeld_10` 1-in-200 → 1-in-100; `minegeld_50` 1-in-300 → 1-in-250. Net:
+  slightly more mid-tier cash, fewer big single notes.
+- Bags unchanged. Looting behaviour unchanged (still an extra rarity-gated
+  roll per item on player kills).
+
 ## [1.2.0] — 2026-07-07
 
 - **Looting enchantment support (x_enchanting-compatible).** Killing a zombie
