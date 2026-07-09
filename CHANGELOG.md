@@ -7,6 +7,19 @@ behaviour only.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-07-08
+
+- **Removed the dedicated hit sound (`zombies_hit.ogg`).** In practice it
+  competed with the weapon's own punch sound: mobs_redo plays a weapon-bound
+  punch sound on every hit (via `on_punch`), while the mob's `damage` sound was
+  throttled to once per 2.5s — so the two overlapped and the zombie-specific
+  grunt was mostly buried. Removed the file, the `damage = 'zombies_hit'`
+  mapping in the `noise` table, and its README/license credits. Zombies now
+  play no mob-specific sound when struck; only the weapon's punch sound plays
+  (that sound is bound to the weapon by mobs_redo, not to the mob, and was
+  always present). No other sounds changed — `groan.ogg`, `eating-brains.ogg`,
+  and the occasional `zombies_death.ogg` are unaffected.
+
 ## [1.3.0] — 2026-07-08
 
 Loot rebalance to slow down how fast drops accumulate, especially when
@@ -64,6 +77,8 @@ with the existing audio (see license.txt for full credits).
   mobs_redo `damage` trigger, replacing the reused groan. Still routed
   through the existing per-entity combat throttle (once per 2.5s), so
   rapid strikes don't machine-gun the sound.
+  *(Superseded in 1.4.0: this sound was removed for competing with the
+  weapon's own punch sound.)*
 
 - **Occasional death cry (Option B).** Death is now usually silent. A new
   death sound (`zombies_death.ogg`, "zombie death" by dreggsome, CC0)

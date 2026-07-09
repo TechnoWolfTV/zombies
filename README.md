@@ -58,18 +58,19 @@ mobs_redo's built-in sound triggers:
   Occasionally (about 1 in 25 of these moan opportunities) a zombie makes a
   wet gnawing "eating" sound instead of a groan — a subtle bit of flavor
   rather than a moan.
-- **Getting hit** — striking a zombie plays a distinct impact grunt. This
-  is throttled to once per 2.5 seconds per zombie so hitting one rapidly
-  doesn't stack the sound on itself.
 - **Combat groans** — when a zombie's pathfinder resolves a route toward
-  you it emits a groan, sharing the same 2.5-second per-zombie throttle.
+  you it emits a groan, throttled to once per 2.5 seconds per zombie.
 - **Death** — usually silent. On death there is a 1-in-4 chance the zombie
   lets out a death cry; most of the time it dies quietly.
 
-Sounds are sourced from `groan.ogg`, `eating-brains.ogg`, `zombies_hit.ogg`
-(CC0, Under7dude), and `zombies_death.ogg` (CC0, dreggsome). See
-`license.txt` for full credits. The chances and timings above are defined as
-named constants near the top of `init.lua` if you want to tune them.
+Zombies play no mob-specific sound when struck; the sound you hear on a hit
+is the weapon's own punch sound, which mobs_redo binds to the weapon rather
+than the mob.
+
+Sounds are sourced from `groan.ogg`, `eating-brains.ogg`, and
+`zombies_death.ogg` (CC0, dreggsome). See `license.txt` for full credits. The
+chances and timings above are defined as named constants near the top of
+`init.lua` if you want to tune them.
 
 ---
 

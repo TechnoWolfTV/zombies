@@ -114,7 +114,9 @@ local noise = {
    distance = 10,
    random = 'groan',
    war_cry = 'groan',
-   damage = 'zombies_hit',
+   -- NOTE: no `damage` key. Zombies play no mob-specific sound when struck;
+   -- only the weapon's own punch sound plays on a hit (that sound is bound to
+   -- the weapon by mobs_redo, not to the mob, so it is not ours to set here).
    -- NOTE: no `death` key here on purpose. Option B: the death sound is
    -- fired manually from on_die at DEATH_SOUND_CHANCE so it plays only
    -- occasionally rather than on every death. See DEATH_SOUND_* below.
@@ -213,8 +215,10 @@ local function make_sound_throttle()
                s._last_groan = 0
                return
             end
-            -- Non-groan combat sounds (damage/hit) throttled by COMBAT_COOLDOWN
-            -- so striking a zombie repeatedly doesn't machine-gun the hit sound.
+            -- Any remaining non-groan sound that arrives through mob_sound is
+            -- throttled by COMBAT_COOLDOWN so it can't machine-gun. (With no
+            -- `damage` sound mapped, this path is rarely hit in practice, but
+            -- it's kept as a safety throttle for any non-groan trigger.)
             -- The death sound is NOT handled here; Option B plays it directly
             -- from on_die at DEATH_SOUND_CHANCE.
             if s._combat_timer and s._combat_timer <= 0 then

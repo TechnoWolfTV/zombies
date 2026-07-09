@@ -29,15 +29,10 @@ released under the same MIT license as the original work above.
 
 Additional sound files (Creative Commons 0 / public domain)
 
-The following sounds were added by TechnoWolfTV and are dedicated to the
+The following sound was added by TechnoWolfTV and is dedicated to the
 public domain under the Creative Commons 0 (CC0 1.0) license. CC0 does not
-require attribution; the authors are credited here as a courtesy. Full
+require attribution; the author is credited here as a courtesy. Full
 license text: https://creativecommons.org/publicdomain/zero/1.0/
-
-- sounds/zombies_hit.ogg
-  "Zombie Hit" by Under7dude
-  https://freesound.org/people/Under7dude/sounds/163447/
-  Downmixed to mono and loudness-normalized for in-game use.
 
 - sounds/zombies_death.ogg
   "zombie death" by dreggsome
